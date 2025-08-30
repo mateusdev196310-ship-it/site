@@ -1,0 +1,64 @@
+{% extends 'controle/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Transações</h1>
+    <a href="{% url 'controle:nova_transacao' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nova Transação
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if transacoes %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Conta</th>
+                        <th>Valor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transacao in transacoes %}
+                    <tr>
+                        <td>{{ transacao.data|date:"d/m/Y" }}</td>
+                        <td>{{ transacao.descricao }}</td>
+                        <td>
+                            {% if transacao.categoria.tipo == 'R' %}
+                            <span class="badge bg-success">{{ transacao.categoria.nome }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ transacao.categoria.nome }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transacao.conta.nome }}</td>
+                        <td>
+                            {% if transacao.categoria.tipo == 'R' %}
+                            <span class="text-success">R$ {{ transacao.valor|floatformat:2 }}</span>
+                            {% else %}
+                            <span class="text-danger">R$ {{ transacao.valor|floatformat:2 }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'controle:editar_transacao' transacao.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <a href="{% url 'controle:excluir_transacao' transacao.id %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash"></i> Excluir
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Nenhuma transação cadastrada.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

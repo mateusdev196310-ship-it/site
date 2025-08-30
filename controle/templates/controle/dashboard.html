@@ -1,0 +1,200 @@
+{% extends 'controle/base.html' %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card card-dashboard card-receita">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-success">Receitas do Mês</h5>
+                        <h2 class="card-text">R$ {{ receitas_mes|floatformat:2 }}</h2>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-arrow-up fa-3x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card card-dashboard card-despesa">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-danger">Despesas do Mês</h5>
+                        <h2 class="card-text">R$ {{ despesas_mes|floatformat:2 }}</h2>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-arrow-down fa-3x text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card card-dashboard card-saldo">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-info">Saldo Total</h5>
+                        <h2 class="card-text">R$ {{ saldo_total|floatformat:2 }}</h2>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-wallet fa-3x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Transações Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if transacoes_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transacao in transacoes_recentes %}
+                            <tr>
+                                <td>{{ transacao.data|date:"d/m/Y" }}</td>
+                                <td>{{ transacao.descricao }}</td>
+                                <td>
+                                    {% if transacao.categoria.tipo == 'R' %}
+                                    <span class="badge bg-success">{{ transacao.categoria.nome }}</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ transacao.categoria.nome }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if transacao.categoria.tipo == 'R' %}
+                                    <span class="text-success">R$ {{ transacao.valor|floatformat:2 }}</span>
+                                    {% else %}
+                                    <span class="text-danger">R$ {{ transacao.valor|floatformat:2 }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <a href="{% url 'controle:lista_transacoes' %}" class="btn btn-outline-primary btn-sm">Ver todas</a>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhuma transação registrada.</p>
+                <a href="{% url 'controle:nova_transacao' %}" class="btn btn-primary">Adicionar Transação</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Despesas por Categoria</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if dados_categorias.labels %}
+                <div style="height: 300px;">
+                    <canvas id="graficoCategoria"></canvas>
+                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const ctx = document.getElementById('graficoCategoria').getContext('2d');
+                        const dados = {{ dados_categorias|safe }};
+                        
+                        new Chart(ctx, {
+                            type: 'doughnut',
+                            data: dados,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                        labels: {
+                                            font: {
+                                                size: 12
+                                            },
+                                            padding: 20
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const label = context.label || '';
+                                                const value = context.raw || 0;
+                                                const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                                const percentage = Math.round((value / total) * 100);
+                                                return `${label}: R$ ${value.toFixed(2)} (${percentage}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                </script>
+                {% else %}
+                <p class="text-muted">Não há dados suficientes para gerar o gráfico.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Minhas Contas</h5>
+            </div>
+            <div class="card-body">
+                {% if contas %}
+                <div class="row">
+                    {% for conta in contas %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ conta.nome }}</h5>
+                                <h4 class="card-text {% if conta.saldo < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    R$ {{ conta.saldo|floatformat:2 }}
+                                </h4>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{% url 'controle:editar_conta' conta.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-end mt-3">
+                    <a href="{% url 'controle:nova_conta' %}" class="btn btn-primary">Nova Conta</a>
+                </div>
+                {% else %}
+                <p class="text-muted">Você ainda não possui contas cadastradas.</p>
+                <a href="{% url 'controle:nova_conta' %}" class="btn btn-primary">Adicionar Conta</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

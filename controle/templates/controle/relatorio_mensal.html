@@ -1,0 +1,324 @@
+{% extends 'controle/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Relatório Mensal</h1>
+    <div>
+        <form method="get" class="d-flex shadow-sm rounded p-2 bg-light">
+            <div class="input-group">
+                <select name="mes" class="form-select border-primary">
+                    <option value="1" {% if mes == 1 %}selected{% endif %}>Janeiro</option>
+                    <option value="2" {% if mes == 2 %}selected{% endif %}>Fevereiro</option>
+                    <option value="3" {% if mes == 3 %}selected{% endif %}>Março</option>
+                    <option value="4" {% if mes == 4 %}selected{% endif %}>Abril</option>
+                    <option value="5" {% if mes == 5 %}selected{% endif %}>Maio</option>
+                    <option value="6" {% if mes == 6 %}selected{% endif %}>Junho</option>
+                    <option value="7" {% if mes == 7 %}selected{% endif %}>Julho</option>
+                    <option value="8" {% if mes == 8 %}selected{% endif %}>Agosto</option>
+                    <option value="9" {% if mes == 9 %}selected{% endif %}>Setembro</option>
+                    <option value="10" {% if mes == 10 %}selected{% endif %}>Outubro</option>
+                    <option value="11" {% if mes == 11 %}selected{% endif %}>Novembro</option>
+                    <option value="12" {% if mes == 12 %}selected{% endif %}>Dezembro</option>
+                </select>
+                <select name="ano" class="form-select border-primary">
+                    {% for ano_opcao in anos_disponiveis %}
+                    <option value="{{ ano_opcao }}" {% if ano == ano_opcao %}selected{% endif %}>{{ ano_opcao }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total de Receitas</h5>
+                <h3 class="card-text">R$ {{ total_receitas|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total de Despesas</h5>
+                <h3 class="card-text">R$ {{ total_despesas|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card {% if saldo_mes >= 0 %}bg-primary{% else %}bg-warning{% endif %} text-white">
+            <div class="card-body">
+                <h5 class="card-title">Saldo do Mês</h5>
+                <h3 class="card-text">R$ {{ saldo_mes|default:"0.00"|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Gráfico de Evolução do Saldo</h5>
+            </div>
+            <div class="card-body">
+                {% if dados_evolucao and dados_evolucao.labels and dados_evolucao.labels.length > 0 %}
+                <div style="height: 300px;">
+                    <canvas id="graficoEvolucao"></canvas>
+                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const ctx = document.getElementById('graficoEvolucao').getContext('2d');
+                        const dados = {{ dados_evolucao|safe }};
+                        
+                        // Verificar se há dados para exibir
+                        if (dados.labels && dados.labels.length > 0 && dados.datasets && dados.datasets.length > 0) {
+                            new Chart(ctx, {
+                                type: 'line',
+                                data: dados,
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    animation: {
+                                        duration: 1500,
+                                        easing: 'easeOutQuart'
+                                    },
+                                    plugins: {
+                                        title: {
+                                            display: true,
+                                            text: 'Evolução do Saldo no Mês',
+                                            font: {
+                                                size: 16,
+                                                weight: 'bold'
+                                            },
+                                            padding: 20
+                                        },
+                                        tooltip: {
+                                                callbacks: {
+                                                    label: function(context) {
+                                                        return `Saldo: R$ ${context.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                                                    }
+                                            },
+                                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                            titleFont: {
+                                                size: 14
+                                            },
+                                            bodyFont: {
+                                                size: 14
+                                            },
+                                            padding: 10,
+                                            displayColors: false
+                                        },
+                                        legend: {
+                                            display: true,
+                                            position: 'top',
+                                            labels: {
+                                                font: {
+                                                    size: 14
+                                                },
+                                                usePointStyle: true,
+                                                padding: 20
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: false,
+                                            ticks: {
+                                                callback: function(value) {
+                                                    return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                                }
+                                            },
+                                            title: {
+                                                display: true,
+                                                text: 'Saldo (R$)'
+                                            }
+                                        },
+                                        x: {
+                                            title: {
+                                                display: true,
+                                                text: 'Data'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        } else {
+                            // Exibir mensagem se não houver dados
+                            ctx.canvas.parentNode.innerHTML = '<div class="text-center p-4"><i class="fas fa-chart-line fa-3x text-muted mb-3"></i><p class="text-muted">Não há dados de evolução disponíveis para o período selecionado.</p></div>';
+                        }
+                    });
+                </script>
+                {% else %}
+                <div class="text-center p-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Não há dados de evolução disponíveis para o período selecionado.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Despesas por Categoria</h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="graficoCategorias"></canvas>
+                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const ctx = document.getElementById('graficoCategorias').getContext('2d');
+                        
+                        // Preparar dados para o gráfico
+                        const categorias = [];
+                        const valores = [];
+                        const cores = [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                            '#FF9F40', '#8AC249', '#EA526F', '#49ADF5', '#C8B0F5'
+                        ];
+                        
+                        {% for item in despesas_por_categoria %}
+                            categorias.push('{{ item.categoria|escapejs }}');
+                            // Garantir que o valor é um número, não uma string formatada
+                            valores.push(parseFloat({{ item.valor }}));
+                        {% endfor %}
+                        
+                        // Ordenar por valor (opcional, mas melhora a visualização)
+                        const combined = categorias.map((categoria, index) => {
+                            return { categoria, valor: valores[index] };
+                        });
+                        
+                        combined.sort((a, b) => b.valor - a.valor);
+                        
+                        const categoriasOrdenadas = combined.map(item => item.categoria);
+                        const valoresOrdenados = combined.map(item => item.valor);
+                        
+                        const dados = {
+                            labels: categoriasOrdenadas,
+                            datasets: [{
+                                label: 'Despesas por Categoria',
+                                data: valoresOrdenados,
+                                backgroundColor: cores.slice(0, categoriasOrdenadas.length),
+                                borderWidth: 1,
+                                borderColor: '#ffffff',
+                                hoverBackgroundColor: cores.map(cor => {
+                                    // Criar uma versão mais clara para hover
+                                    return cor.replace(')', ', 0.8)').replace('rgb', 'rgba');
+                                }),
+                                hoverBorderWidth: 2,
+                                hoverBorderColor: '#333'
+                            }]
+                        };
+                        
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: dados,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                animation: {
+                                    duration: 1500,
+                                    easing: 'easeOutQuart',
+                                    delay: function(context) {
+                                        // Adiciona um atraso escalonado para cada barra
+                                        return context.dataIndex * 100;
+                                    }
+                                },
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Despesas por Categoria',
+                                        font: {
+                                            size: 16,
+                                            weight: 'bold'
+                                        },
+                                        padding: 20
+                                    },
+                                    tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    const value = context.raw;
+                                                    const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                                    const percentage = Math.round((value / total) * 100);
+                                                    return `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${percentage}%)`;
+                                            }
+                                        },
+                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                        titleFont: {
+                                            size: 14
+                                        },
+                                        bodyFont: {
+                                            size: 14
+                                        },
+                                        padding: 10,
+                                        displayColors: true,
+                                        usePointStyle: true
+                                    },
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: 'rgba(0, 0, 0, 0.1)'
+                                        },
+                                        ticks: {
+                                            callback: function(value) {
+                                                return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                            },
+                                            font: {
+                                                weight: 'bold'
+                                            }
+                                        }
+                                    },
+                                    y: {
+                                        grid: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            font: {
+                                                weight: 'bold'
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                </script>
+                
+                <div class="table-responsive mt-4">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in despesas_por_categoria %}
+                            <tr>
+                                <td>{{ item.categoria }}</td>
+                                <td>R$ {{ item.valor_formatado }}</td>
+                                <td>{{ item.percentual|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

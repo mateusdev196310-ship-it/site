@@ -1,0 +1,225 @@
+{% extends 'controle/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{% if form.instance.pk %}Editar{% else %}Nova{% endif %} Transação</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_descricao" class="form-label">Descrição</label>
+                        {{ form.descricao }}
+                        {% if form.descricao.errors %}
+                            <div class="text-danger">{{ form.descricao.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_valor" class="form-label">Valor</label>
+                            {{ form.valor }}
+                            {% if form.valor.errors %}
+                                <div class="text-danger">{{ form.valor.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_data" class="form-label">Data</label>
+                            {{ form.data }}
+                            {% if form.data.errors %}
+                                <div class="text-danger">{{ form.data.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_categoria" class="form-label">Categoria</label>
+                            <div class="input-group">
+                                {{ form.categoria }}
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#novaCategoriaModal">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            {% if form.categoria.errors %}
+                                <div class="text-danger">{{ form.categoria.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_conta" class="form-label">Conta</label>
+                            <div class="input-group">
+                                {{ form.conta }}
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#novaContaModal">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            {% if form.conta.errors %}
+                                <div class="text-danger">{{ form.conta.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_observacao" class="form-label">Observação</label>
+                        {{ form.observacao }}
+                        {% if form.observacao.errors %}
+                            <div class="text-danger">{{ form.observacao.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'controle:lista_transacoes' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Modal Nova Categoria -->
+    <div class="modal fade" id="novaCategoriaModal" tabindex="-1" aria-labelledby="novaCategoriaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="novaCategoriaModalLabel">Nova Categoria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNovaCategoria" method="post" action="{% url 'controle:ajax_criar_categoria' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="nome_categoria" class="form-label">Nome da Categoria</label>
+                            <input type="text" class="form-control" id="nome_categoria" name="nome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tipo_categoria" class="form-label">Tipo</label>
+                            <select class="form-select" id="tipo_categoria" name="tipo" required>
+                                <option value="D">Despesa</option>
+                                <option value="R">Receita</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarCategoria">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Conta -->
+    <div class="modal fade" id="novaContaModal" tabindex="-1" aria-labelledby="novaContaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="novaContaModalLabel">Nova Conta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNovaConta" method="post" action="{% url 'controle:ajax_criar_conta' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="nome_conta" class="form-label">Nome da Conta</label>
+                            <input type="text" class="form-control" id="nome_conta" name="nome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="saldo_inicial" class="form-label">Saldo Inicial</label>
+                            <input type="number" step="0.01" class="form-control" id="saldo_inicial" name="saldo_inicial" value="0.00">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarConta">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Salvar nova categoria
+            document.getElementById('btnSalvarCategoria').addEventListener('click', function() {
+                const form = document.getElementById('formNovaCategoria');
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Adicionar nova categoria ao select
+                        const select = document.getElementById('id_categoria');
+                        const option = new Option(data.categoria_nome, data.categoria_id);
+                        select.add(option);
+                        select.value = data.categoria_id;
+                        
+                        // Fechar modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('novaCategoriaModal'));
+                        modal.hide();
+                        
+                        // Limpar formulário
+                        form.reset();
+                    } else {
+                        alert('Erro ao criar categoria: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao processar a solicitação');
+                });
+            });
+            
+            // Salvar nova conta
+            document.getElementById('btnSalvarConta').addEventListener('click', function() {
+                const form = document.getElementById('formNovaConta');
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Adicionar nova conta ao select
+                        const select = document.getElementById('id_conta');
+                        const option = new Option(data.conta_nome, data.conta_id);
+                        select.add(option);
+                        select.value = data.conta_id;
+                        
+                        // Fechar modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('novaContaModal'));
+                        modal.hide();
+                        
+                        // Limpar formulário
+                        form.reset();
+                    } else {
+                        alert('Erro ao criar conta: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao processar a solicitação');
+                });
+            });
+        });
+    </script>
+{% endblock %}
