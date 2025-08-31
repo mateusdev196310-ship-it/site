@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.utils import timezone
 from django.http import JsonResponse
 from datetime import datetime, timedelta
@@ -260,32 +260,53 @@ def relatorio_mensal(request):
     total_despesas = despesas.aggregate(total=Sum('valor'))['total'] or 0
     saldo_mensal = total_receitas - total_despesas
     
-    # Dados para gráfico de evolução diária
-    dias = (data_fim - data_inicio).days + 1
-    datas = [data_inicio + timedelta(days=i) for i in range(dias)]
+    # 1. Ajuste para o gráfico de evolução diária
+    # Pega o saldo total da conta do usuário no dia anterior ao início do mês
+    data_dia_anterior = data_inicio - timedelta(days=1)
+    
+    # Agrega receitas e despesas até o dia anterior para um cálculo mais eficiente
+    saldo_inicial_mes = Transacao.objects.filter(
+        usuario=request.user,
+        data__lte=data_dia_anterior,
+    ).aggregate(
+        total_receitas=Sum('valor', filter=Q(categoria__tipo='R')),
+        total_despesas=Sum('valor', filter=Q(categoria__tipo='D'))
+    )
+
+    # 2. Inicia o saldo acumulado com o valor do mês anterior
+    saldo_acumulado = (saldo_inicial_mes['total_receitas'] or 0) - (saldo_inicial_mes['total_despesas'] or 0)
+        
+    # Pega todas as transações do mês e ordena por data para o cálculo diário
+    transacoes_mes = Transacao.objects.filter(
+        usuario=request.user,
+        data__range=[data_inicio, data_fim]
+    ).order_by('data')
+
     saldos_diarios = []
-    saldo_acumulado = 0
-    
-    for data in datas:
-        receita_dia = Transacao.objects.filter(
-            usuario=request.user,
+    labels_datas = []
+
+    # 3. Itera sobre os dias do mês
+    current_data = data_inicio
+    while current_data <= data_fim:
+        # Pega as transações do dia
+        receita_dia = transacoes_mes.filter(
             categoria__tipo='R',
-            data=data
+            data=current_data
         ).aggregate(total=Sum('valor'))['total'] or 0
-        
-        despesa_dia = Transacao.objects.filter(
-            usuario=request.user,
+
+        despesa_dia = transacoes_mes.filter(
             categoria__tipo='D',
-            data=data
+            data=current_data
         ).aggregate(total=Sum('valor'))['total'] or 0
-        
-        saldo_dia = receita_dia - despesa_dia
-        saldo_acumulado += saldo_dia
+
+        # Atualiza o saldo acumulado
+        saldo_acumulado += receita_dia - despesa_dia
         saldos_diarios.append(float(saldo_acumulado))
-    
+        labels_datas.append(current_data.strftime('%d/%m'))
+
+        current_data += timedelta(days=1)
+
     # Preparar dados para Chart.js
-    labels_datas = [data.strftime('%d/%m') for data in datas]
-    
     dados_evolucao = {
         'labels': labels_datas,
         'datasets': [{
@@ -323,6 +344,8 @@ def relatorio_mensal(request):
             'valor_formatado': f"{float(total):,.2f}".replace(',', '.').replace('.', ','),
             'percentual': 0  # Será calculado abaixo
         })
+
+    despesas_por_categoria= sorted(despesas_por_categoria, key= lambda x: x['valor'], reverse=True)
     
     # Calcular percentuais
     total_despesas_valor = sum(item['valor'] for item in despesas_por_categoria)
@@ -343,7 +366,6 @@ def relatorio_mensal(request):
     }
     
     return render(request, 'controle/relatorio_mensal.html', context)
-
 
 @login_required
 def ajax_criar_categoria(request):
